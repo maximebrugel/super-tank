@@ -100,8 +100,10 @@ contract SuperTank_Tests is Test {
         vm.startPrank(gobblerOwners[0]);
 
         
-        // Add goo balance to gobblerOwners[0]
+        // Add goo balances
+        deal(address(goo), address(this), 100000 ether);
         deal(address(goo), gobblerOwners[0], 100000 ether);
+
         // Had half goo balance to gobblers virtual balance
         gobblers.addGoo(50000 ether);
         // Mint a Gobbler with goo virtual balance
@@ -115,10 +117,8 @@ contract SuperTank_Tests is Test {
 
     // TODO => Cannot deposit gobbler if not the owner
     function testDepositNotOwnedGobbler() public {
-        console.log(gobblers.balanceOf(gobblerOwners[0]));
-        console.log(gobblers.gooBalance(gobblerOwners[0]));
-        console.log(goo.balanceOf(gobblerOwners[0]));
-        // superTank.depositGobbler();
+        vm.expectRevert("WRONG_FROM");
+        superTank.depositGobbler(0, 100 ether);
     }
 
     // TODO => Deposit first Gobbler but NO Goo already deposited
