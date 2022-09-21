@@ -268,7 +268,7 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
     }
 
-    // TODO => Withdraw goo but no gobblers deposited
+    /// @dev Withdraw goo but no gobblers deposited
     function testWithdrawGooButNoGobbler() public {
         testDepositGooButNoGobbler();
 
