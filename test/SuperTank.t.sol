@@ -97,9 +97,29 @@ contract SuperTank_Tests is Test {
         superTank = new SuperTank(ERC20(address(goo)), gobblers);
 
         vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        
+        // Add goo balance to gobblerOwners[0]
+        deal(address(goo), gobblerOwners[0], 100000 ether);
+        // Had half goo balance to gobblers virtual balance
+        gobblers.addGoo(50000 ether);
+        // Mint a Gobbler with goo virtual balance
+        gobblers.mintFromGoo(
+            gobblers.gobblerPrice(),
+            true
+        );
+
+        vm.stopPrank();
     }
 
     // TODO => Cannot deposit gobbler if not the owner
+    function testDepositNotOwnedGobbler() public {
+        console.log(gobblers.balanceOf(gobblerOwners[0]));
+        console.log(gobblers.gooBalance(gobblerOwners[0]));
+        console.log(goo.balanceOf(gobblerOwners[0]));
+        // superTank.depositGobbler();
+    }
 
     // TODO => Deposit first Gobbler but NO Goo already deposited
 
