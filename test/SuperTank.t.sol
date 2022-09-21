@@ -169,7 +169,28 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
     }
 
-    // TODO => Deposit second Gobbler with 0 Goo already deposited and gooAmount = 0
+    /// @dev Deposit second Gobbler with 0 Goo already deposited and gooAmount = 0
+    function testSecondDepositWithoutGooAndZeroAmount() public {
+        vm.startPrank(gobblerOwners[1]);
+        
+        gobblers.setApprovalForAll(address(superTank), true);
+        superTank.depositGobbler(2, 0);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
+
+        superTank.depositGobbler(1, 0);
+
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.ownerOf(2), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 0);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
 
     // TODO => Deposit second Gobbler with 0 Goo already deposited and gooAmount != 0
 
