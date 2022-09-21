@@ -282,7 +282,19 @@ contract SuperTank_Tests is Test {
         assertEq(gobblers.gooBalance(address(superTank)), 0);
     }
 
-    // TODO => Withdraw goo with one Gobbler deposited
+    /// @dev Withdraw goo with one Gobbler deposited
+    function testWithdrawGooWithGobblerDeposited() public {
+        testDepositGooWithGobblerDeposited();
+
+        uint256 userBalanceBefore = goo.balanceOf(gobblerOwners[0]);
+        uint256 superTankVirtualBalanceBefore = gobblers.gooBalance(address(superTank));
+
+        superTank.withdraw(50 ether, gobblerOwners[0], gobblerOwners[0]);
+
+        assertEq(goo.balanceOf(gobblerOwners[0]), userBalanceBefore + 50 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+        assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
+    }
 
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {
