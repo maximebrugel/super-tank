@@ -45,6 +45,8 @@ contract SuperTank_Tests is Test {
 
     SuperTank internal superTank;
 
+    error NotDepositor(uint256 gobblerId);
+
     function setUp() public {
         deployer = addr("deployer");
         artGobblerDeployer = addr("artGobblerDeployer");
@@ -228,7 +230,22 @@ contract SuperTank_Tests is Test {
         superTank.depositGobbler(1, type(uint256).max);
     }
 
-    // TODO => Cannot withdraw Gobbler if not the initial depositor
+    /// @dev Cannot withdraw Gobbler if not the initial depositor
+    function testCannotWithdrawIfNotDepositor() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
+
+        superTank.depositGobbler(1, 100 ether);
+
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodePacked(NotDepositor.selector, uint256(1)));
+        superTank.withdrawGobbler(1);
+    }
 
     // TODO => Deposit goo but no gobblers deposited
 
