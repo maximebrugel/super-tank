@@ -60,7 +60,6 @@ contract SuperTank is ERC4626, ReentrancyGuard {
         // Transfer and deposit the goo tokens to the SuperTank
         // Only if the depositor wants...
         if (gooAmount != 0) {
-            asset.transferFrom(msg.sender, address(this), gooAmount);
             deposit(gooAmount, msg.sender);
         }
 
