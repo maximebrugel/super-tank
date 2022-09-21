@@ -98,7 +98,6 @@ contract SuperTank_Tests is Test {
 
         vm.stopPrank();
         vm.startPrank(gobblerOwners[0]);
-
         
         // Add goo balances
         deal(address(goo), address(this), 100000 ether);
@@ -115,13 +114,28 @@ contract SuperTank_Tests is Test {
         vm.stopPrank();
     }
 
-    // TODO => Cannot deposit gobbler if not the owner
+    /// @dev Cannot deposit gobbler if not the owner
     function testDepositNotOwnedGobbler() public {
+        gobblers.setApprovalForAll(address(superTank), true);
+
         vm.expectRevert("WRONG_FROM");
-        superTank.depositGobbler(0, 100 ether);
+        superTank.depositGobbler(1, 100 ether);
     }
 
-    // TODO => Deposit first Gobbler but NO Goo already deposited
+    /// @dev Deposit first Gobbler but NO Goo already deposited
+    function testFirstDepositWithoutGoo() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
+
+        superTank.depositGobbler(1, 100 ether);
+
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+    }
 
     // TODO => Deposit first Gobbler with some Goo already deposited
 
