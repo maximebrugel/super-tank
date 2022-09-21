@@ -215,7 +215,18 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
     }
 
-    // TODO => Cannot deposit Gobbler with wrong Goo Amount
+    /// @dev Cannot deposit Gobbler with wrong Goo Amount
+    function testCannotDepositWithWrongGooAmount() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
+
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        superTank.depositGobbler(1, type(uint256).max);
+    }
 
     // TODO => Cannot withdraw Gobbler if not the initial depositor
 
