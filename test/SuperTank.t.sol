@@ -19,8 +19,9 @@ import {LibString} from "solmate/utils/LibString.sol";
 import {fromDaysWadUnsafe} from "solmate/utils/SignedWadMath.sol";
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
-import {SuperTank} from "src/SuperTank.sol";
+import {SuperTank} from "../src/SuperTank.sol";
 
 contract SuperTank_Tests is Test {
     address internal deployer;
@@ -28,6 +29,7 @@ contract SuperTank_Tests is Test {
 
     Utilities internal utils;
     address payable[] internal users;
+    address payable[] internal gobblerOwners;
 
     ArtGobblers internal gobblers;
     VRFCoordinatorMock internal vrfCoordinator;
@@ -49,12 +51,13 @@ contract SuperTank_Tests is Test {
 
         utils = new Utilities();
         users = utils.createUsers(5);
+        gobblerOwners = utils.createUsers(5);
         linkToken = new LinkToken();
         vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
 
         //gobblers contract will be deployed after 4 contract deploys, and pages after 5
-        address gobblerAddress = utils.predictContractAddress(address(this), 4);
-        address pagesAddress = utils.predictContractAddress(address(this), 5);
+        address gobblerAddress = utils.predictContractAddress(artGobblerDeployer, 4);
+        address pagesAddress = utils.predictContractAddress(artGobblerDeployer, 5);
 
         vm.startPrank(artGobblerDeployer);
         team = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
@@ -69,9 +72,9 @@ contract SuperTank_Tests is Test {
 
         goo = new Goo(
             // Gobblers:
-            utils.predictContractAddress(address(this), 1),
+            gobblerAddress,
             // Pages:
-            utils.predictContractAddress(address(this), 2)
+            pagesAddress
         );
 
         gobblers = new ArtGobblers(
@@ -85,11 +88,10 @@ contract SuperTank_Tests is Test {
             "base",
             ""
         );
-
+        
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
 
         vm.stopPrank();
-
         vm.startPrank(deployer);
 
         superTank = new SuperTank(ERC20(address(goo)), gobblers);
