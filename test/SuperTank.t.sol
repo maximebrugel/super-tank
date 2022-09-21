@@ -11,8 +11,8 @@ import {GobblerReserve} from "art-gobblers/utils/GobblerReserve.sol";
 import {RandProvider} from "art-gobblers/utils/rand/RandProvider.sol";
 import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
 
-
-// TODO import {VRFCoordinatorMock} from "chainlink/v0.8/mocks/VRFCoordinatorMock.sol";
+import {VRFCoordinatorMock} from "chainlink/v0.8/mocks/VRFCoordinatorMock.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {MockERC1155} from "solmate/test/utils/mocks/MockERC1155.sol";
 import {LibString} from "solmate/utils/LibString.sol";
@@ -22,7 +22,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {SuperTank} from "src/SuperTank.sol";
 
-contract TestContract is Test {
+contract SuperTank_Tests is Test {
     address internal deployer;
     address internal artGobblerDeployer;
 
@@ -30,7 +30,7 @@ contract TestContract is Test {
     address payable[] internal users;
 
     ArtGobblers internal gobblers;
-    // VRFCoordinatorMock internal vrfCoordinator;
+    VRFCoordinatorMock internal vrfCoordinator;
     LinkToken internal linkToken;
     Goo internal goo;
     Pages internal pages;
@@ -41,9 +41,60 @@ contract TestContract is Test {
     bytes32 private keyHash;
     uint256 private fee;
 
+    SuperTank internal superTank;
+
     function setUp() public {
         deployer = addr("deployer");
         artGobblerDeployer = addr("artGobblerDeployer");
+
+        utils = new Utilities();
+        users = utils.createUsers(5);
+        linkToken = new LinkToken();
+        vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
+
+        //gobblers contract will be deployed after 4 contract deploys, and pages after 5
+        address gobblerAddress = utils.predictContractAddress(address(this), 4);
+        address pagesAddress = utils.predictContractAddress(address(this), 5);
+
+        vm.startPrank(artGobblerDeployer);
+        team = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
+        community = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
+        randProvider = new ChainlinkV1RandProvider(
+            ArtGobblers(gobblerAddress),
+            address(vrfCoordinator),
+            address(linkToken),
+            keyHash,
+            fee
+        );
+
+        goo = new Goo(
+            // Gobblers:
+            utils.predictContractAddress(address(this), 1),
+            // Pages:
+            utils.predictContractAddress(address(this), 2)
+        );
+
+        gobblers = new ArtGobblers(
+            keccak256(abi.encodePacked(users[0])),
+            block.timestamp,
+            goo,
+            Pages(pagesAddress),
+            address(team),
+            address(community),
+            randProvider,
+            "base",
+            ""
+        );
+
+        pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
+
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+
+        superTank = new SuperTank(ERC20(address(goo)), gobblers);
+
+        vm.stopPrank();
     }
 
     // TODO => Cannot deposit gobbler if not the owner
