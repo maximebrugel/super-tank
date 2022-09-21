@@ -144,8 +144,6 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
-
         superTank.depositGobbler(1, 100 ether);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
@@ -161,8 +159,6 @@ contract SuperTank_Tests is Test {
         goo.approve(address(superTank), type(uint256).max);
         
         superTank.deposit(100 ether, gobblerOwners[0]);
-
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
 
         superTank.depositGobbler(1, 100 ether);
 
@@ -183,8 +179,6 @@ contract SuperTank_Tests is Test {
 
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
-
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
 
         superTank.depositGobbler(1, 0);
 
@@ -207,8 +201,6 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
-
         superTank.depositGobbler(1, 100 ether);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
@@ -224,8 +216,6 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
-
         vm.expectRevert("TRANSFER_FROM_FAILED");
         superTank.depositGobbler(1, type(uint256).max);
     }
@@ -236,8 +226,6 @@ contract SuperTank_Tests is Test {
 
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
-
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
 
         superTank.depositGobbler(1, 100 ether);
 
