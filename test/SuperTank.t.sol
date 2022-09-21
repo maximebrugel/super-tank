@@ -235,7 +235,18 @@ contract SuperTank_Tests is Test {
         superTank.withdrawGobbler(1);
     }
 
-    // TODO => Deposit goo but no gobblers deposited
+    /// @dev Deposit goo but no gobblers deposited
+    function testDepositGooButNoGobbler() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.deposit(100 ether, gobblerOwners[0]);
+
+        assertEq(gobblers.ownerOf(1), gobblerOwners[0]);
+        assertEq(gobblers.gooBalance(address(superTank)), 0);
+        assertEq(goo.balanceOf(address(superTank)), 100 ether);
+    }
 
     // TODO => Deposit goo with one Gobbler deposited
 
