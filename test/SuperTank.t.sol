@@ -97,12 +97,25 @@ contract SuperTank_Tests is Test {
         superTank = new SuperTank(ERC20(address(goo)), gobblers);
 
         vm.stopPrank();
-        vm.startPrank(gobblerOwners[0]);
-        
+
         // Add goo balances
         deal(address(goo), address(this), 100000 ether);
         deal(address(goo), gobblerOwners[0], 100000 ether);
+        deal(address(goo), gobblerOwners[1], 100000 ether);
 
+        vm.startPrank(gobblerOwners[0]);
+        
+        // Had half goo balance to gobblers virtual balance
+        gobblers.addGoo(50000 ether);
+        // Mint a Gobbler with goo virtual balance
+        gobblers.mintFromGoo(
+            gobblers.gobblerPrice(),
+            true
+        );
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[1]);
+        
         // Had half goo balance to gobblers virtual balance
         gobblers.addGoo(50000 ether);
         // Mint a Gobbler with goo virtual balance
@@ -135,9 +148,26 @@ contract SuperTank_Tests is Test {
 
         assertEq(gobblers.ownerOf(1), address(superTank));
         assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
     }
 
-    // TODO => Deposit first Gobbler with some Goo already deposited
+    /// @dev Deposit first Gobbler with some Goo already deposited
+    function testFirstDepositWithGoo() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+        
+        superTank.deposit(100 ether, gobblerOwners[0]);
+
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[0]);
+
+        superTank.depositGobbler(1, 100 ether);
+
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 200 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
 
     // TODO => Deposit second Gobbler with 0 Goo already deposited and gooAmount = 0
 
