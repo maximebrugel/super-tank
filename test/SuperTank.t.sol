@@ -248,7 +248,25 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 100 ether);
     }
 
-    // TODO => Deposit goo with one Gobbler deposited
+    /// @dev Deposit goo with one Gobbler deposited
+    function testDepositGooWithGobblerDeposited() public {
+        vm.startPrank(gobblerOwners[1]);
+        
+        gobblers.setApprovalForAll(address(superTank), true);
+        superTank.depositGobbler(2, 0);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.deposit(100 ether, gobblerOwners[0]);
+
+        assertEq(gobblers.ownerOf(1), gobblerOwners[0]);
+        assertEq(gobblers.ownerOf(2), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
 
     // TODO => Withdraw goo but no gobblers deposited
 
