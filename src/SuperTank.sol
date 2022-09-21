@@ -5,7 +5,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
-import {Goo} from "art-gobblers/Goo.sol";
 import {ArtGobblers} from "art-gobblers/ArtGobblers.sol";
 
 contract SuperTank is ERC4626, ReentrancyGuard {
@@ -33,7 +32,7 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /*                                   MEMORY                                   */
     /* -------------------------------------------------------------------------- */
 
-    /// @notice Deposited gobblers
+    /// @notice Deposited gobblers (Gobbler ID => Depositor address)
     mapping(uint256 => address) public deposits;
 
     /// @notice Amount of gobblers deposited in SuperTank
