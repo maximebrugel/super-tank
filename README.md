@@ -1,6 +1,7 @@
-
-# <h1 align="center"> <img src="https://img.icons8.com/color/344/tank.png" width="120" > </h1>
-# <h3 align="center" style="margin-top:-80px">(Super Tank)</h3>
+<center>
+    <img src="https://img.icons8.com/color/344/tank.png" width="120" >
+</center>
+<h3 align="center" style="margin-top:-10px">(Super Tank)</h3>
 
 <h5 align="center"> ERC-4626 super tank for all <a href="https://github.com/artgobblers/art-gobblers">Gobblers and Goo Tokens</a> </h5>
 
