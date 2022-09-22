@@ -1,4 +1,4 @@
-<img src="https://img.icons8.com/color/344/tank.png" width="120" align="center">
+<img src="https://img.icons8.com/color/344/tank.png" width="120" align="middle"/>
 
 <h3 align="center" style="margin-top:-10px">(Super Tank)</h3>
 
