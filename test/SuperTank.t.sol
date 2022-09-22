@@ -19,8 +19,9 @@ import {LibString} from "solmate/utils/LibString.sol";
 import {fromDaysWadUnsafe} from "solmate/utils/SignedWadMath.sol";
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 
-import {SuperTank} from "src/SuperTank.sol";
+import {SuperTank} from "../src/SuperTank.sol";
 
 contract SuperTank_Tests is Test {
     address internal deployer;
@@ -28,6 +29,7 @@ contract SuperTank_Tests is Test {
 
     Utilities internal utils;
     address payable[] internal users;
+    address payable[] internal gobblerOwners;
 
     ArtGobblers internal gobblers;
     VRFCoordinatorMock internal vrfCoordinator;
@@ -43,18 +45,21 @@ contract SuperTank_Tests is Test {
 
     SuperTank internal superTank;
 
+    error NotDepositor(uint256 gobblerId);
+
     function setUp() public {
         deployer = addr("deployer");
         artGobblerDeployer = addr("artGobblerDeployer");
 
         utils = new Utilities();
         users = utils.createUsers(5);
+        gobblerOwners = utils.createUsers(5);
         linkToken = new LinkToken();
         vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
 
         //gobblers contract will be deployed after 4 contract deploys, and pages after 5
-        address gobblerAddress = utils.predictContractAddress(address(this), 4);
-        address pagesAddress = utils.predictContractAddress(address(this), 5);
+        address gobblerAddress = utils.predictContractAddress(artGobblerDeployer, 4);
+        address pagesAddress = utils.predictContractAddress(artGobblerDeployer, 5);
 
         vm.startPrank(artGobblerDeployer);
         team = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
@@ -69,9 +74,9 @@ contract SuperTank_Tests is Test {
 
         goo = new Goo(
             // Gobblers:
-            utils.predictContractAddress(address(this), 1),
+            gobblerAddress,
             // Pages:
-            utils.predictContractAddress(address(this), 2)
+            pagesAddress
         );
 
         gobblers = new ArtGobblers(
@@ -89,36 +94,202 @@ contract SuperTank_Tests is Test {
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
 
         vm.stopPrank();
-
         vm.startPrank(deployer);
 
         superTank = new SuperTank(ERC20(address(goo)), gobblers);
 
         vm.stopPrank();
+
+        // Add goo balances
+        deal(address(goo), address(this), 100000 ether);
+        deal(address(goo), gobblerOwners[0], 100000 ether);
+        deal(address(goo), gobblerOwners[1], 100000 ether);
+
+        vm.startPrank(gobblerOwners[0]);
+
+        // Had half goo balance to gobblers virtual balance
+        gobblers.addGoo(50000 ether);
+        // Mint a Gobbler with goo virtual balance
+        gobblers.mintFromGoo(gobblers.gobblerPrice(), true);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[1]);
+
+        // Had half goo balance to gobblers virtual balance
+        gobblers.addGoo(50000 ether);
+        // Mint a Gobbler with goo virtual balance
+        gobblers.mintFromGoo(gobblers.gobblerPrice(), true);
+
+        vm.stopPrank();
     }
 
-    // TODO => Cannot deposit gobbler if not the owner
+    /// @dev Cannot deposit gobbler if not the owner
+    function testDepositNotOwnedGobbler() public {
+        gobblers.setApprovalForAll(address(superTank), true);
 
-    // TODO => Deposit first Gobbler but NO Goo already deposited
+        vm.expectRevert("WRONG_FROM");
+        superTank.depositGobbler(1, 100 ether);
+    }
 
-    // TODO => Deposit first Gobbler with some Goo already deposited
+    /// @dev Deposit first Gobbler but NO Goo already deposited
+    function testFirstDepositWithoutGoo() public {
+        vm.startPrank(gobblerOwners[0]);
 
-    // TODO => Deposit second Gobbler with 0 Goo already deposited and gooAmount = 0
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
 
-    // TODO => Deposit second Gobbler with 0 Goo already deposited and gooAmount != 0
+        superTank.depositGobbler(1, 100 ether);
 
-    // TODO => Cannot deposit Gobbler with wrong Goo Amount
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
 
-    // TODO => Cannot withdraw Gobbler if not the initial depositor
+    /// @dev Deposit first Gobbler with some Goo already deposited
+    function testFirstDepositWithGoo() public {
+        vm.startPrank(gobblerOwners[0]);
 
-    // TODO => Deposit goo but no gobblers deposited
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
 
-    // TODO => Deposit goo with one Gobbler deposited
+        superTank.deposit(100 ether, gobblerOwners[0]);
 
-    // TODO => Withdraw goo but no gobblers deposited
+        superTank.depositGobbler(1, 100 ether);
 
-    // TODO => Withdraw goo with one Gobbler deposited
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 200 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
 
+    /// @dev Deposit second Gobbler with 0 Goo already deposited and gooAmount = 0
+    function testSecondDepositWithoutGooAndZeroAmount() public {
+        vm.startPrank(gobblerOwners[1]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        superTank.depositGobbler(2, 0);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.depositGobbler(1, 0);
+
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.ownerOf(2), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 0);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
+
+    /// @dev Deposit second Gobbler with 0 Goo already deposited and gooAmount != 0
+    function testSecondDepositWithoutGoo() public {
+        vm.startPrank(gobblerOwners[1]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        superTank.depositGobbler(2, 0);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.depositGobbler(1, 100 ether);
+
+        assertEq(gobblers.ownerOf(1), address(superTank));
+        assertEq(gobblers.ownerOf(2), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
+
+    /// @dev Cannot deposit Gobbler with wrong Goo Amount
+    function testCannotDepositWithWrongGooAmount() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        superTank.depositGobbler(1, type(uint256).max);
+    }
+
+    /// @dev Cannot withdraw Gobbler if not the initial depositor
+    function testCannotWithdrawIfNotDepositor() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.depositGobbler(1, 100 ether);
+
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodePacked(NotDepositor.selector, uint256(1)));
+        superTank.withdrawGobbler(1);
+    }
+
+    /// @dev Deposit goo but no gobblers deposited
+    function testDepositGooButNoGobbler() public {
+        vm.startPrank(gobblerOwners[0]);
+
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.deposit(100 ether, gobblerOwners[0]);
+
+        assertEq(gobblers.ownerOf(1), gobblerOwners[0]);
+        assertEq(gobblers.gooBalance(address(superTank)), 0);
+        assertEq(goo.balanceOf(address(superTank)), 100 ether);
+    }
+
+    /// @dev Deposit goo with one Gobbler deposited
+    function testDepositGooWithGobblerDeposited() public {
+        vm.startPrank(gobblerOwners[1]);
+
+        gobblers.setApprovalForAll(address(superTank), true);
+        superTank.depositGobbler(2, 0);
+
+        vm.stopPrank();
+        vm.startPrank(gobblerOwners[0]);
+
+        goo.approve(address(superTank), type(uint256).max);
+
+        superTank.deposit(100 ether, gobblerOwners[0]);
+
+        assertEq(gobblers.ownerOf(1), gobblerOwners[0]);
+        assertEq(gobblers.ownerOf(2), address(superTank));
+        assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
+
+    /// @dev Withdraw goo but no gobblers deposited
+    function testWithdrawGooButNoGobbler() public {
+        testDepositGooButNoGobbler();
+
+        uint256 userBalanceBefore = goo.balanceOf(gobblerOwners[0]);
+        uint256 superTankBalanceBefore = goo.balanceOf(address(superTank));
+
+        superTank.withdraw(50 ether, gobblerOwners[0], gobblerOwners[0]);
+
+        assertEq(goo.balanceOf(gobblerOwners[0]), userBalanceBefore + 50 ether);
+        assertEq(goo.balanceOf(address(superTank)), superTankBalanceBefore - 50 ether);
+        assertEq(gobblers.gooBalance(address(superTank)), 0);
+    }
+
+    /// @dev Withdraw goo with one Gobbler deposited
+    function testWithdrawGooWithGobblerDeposited() public {
+        testDepositGooWithGobblerDeposited();
+
+        uint256 userBalanceBefore = goo.balanceOf(gobblerOwners[0]);
+        uint256 superTankVirtualBalanceBefore = gobblers.gooBalance(address(superTank));
+
+        superTank.withdraw(50 ether, gobblerOwners[0], gobblerOwners[0]);
+
+        assertEq(goo.balanceOf(gobblerOwners[0]), userBalanceBefore + 50 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+        assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
+    }
+    
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {
         return address(uint160(uint256(keccak256(abi.encode(source)))));
