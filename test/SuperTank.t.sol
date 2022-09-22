@@ -90,7 +90,7 @@ contract SuperTank_Tests is Test {
             "base",
             ""
         );
-        
+
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
 
         vm.stopPrank();
@@ -106,25 +106,19 @@ contract SuperTank_Tests is Test {
         deal(address(goo), gobblerOwners[1], 100000 ether);
 
         vm.startPrank(gobblerOwners[0]);
-        
+
         // Had half goo balance to gobblers virtual balance
         gobblers.addGoo(50000 ether);
         // Mint a Gobbler with goo virtual balance
-        gobblers.mintFromGoo(
-            gobblers.gobblerPrice(),
-            true
-        );
+        gobblers.mintFromGoo(gobblers.gobblerPrice(), true);
 
         vm.stopPrank();
         vm.startPrank(gobblerOwners[1]);
-        
+
         // Had half goo balance to gobblers virtual balance
         gobblers.addGoo(50000 ether);
         // Mint a Gobbler with goo virtual balance
-        gobblers.mintFromGoo(
-            gobblers.gobblerPrice(),
-            true
-        );
+        gobblers.mintFromGoo(gobblers.gobblerPrice(), true);
 
         vm.stopPrank();
     }
@@ -157,7 +151,7 @@ contract SuperTank_Tests is Test {
 
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
-        
+
         superTank.deposit(100 ether, gobblerOwners[0]);
 
         superTank.depositGobbler(1, 100 ether);
@@ -191,7 +185,7 @@ contract SuperTank_Tests is Test {
     /// @dev Deposit second Gobbler with 0 Goo already deposited and gooAmount != 0
     function testSecondDepositWithoutGoo() public {
         vm.startPrank(gobblerOwners[1]);
-        
+
         gobblers.setApprovalForAll(address(superTank), true);
         superTank.depositGobbler(2, 0);
 
@@ -251,7 +245,7 @@ contract SuperTank_Tests is Test {
     /// @dev Deposit goo with one Gobbler deposited
     function testDepositGooWithGobblerDeposited() public {
         vm.startPrank(gobblerOwners[1]);
-        
+
         gobblers.setApprovalForAll(address(superTank), true);
         superTank.depositGobbler(2, 0);
 
@@ -295,7 +289,7 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
         assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
     }
-
+    
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {
         return address(uint160(uint256(keccak256(abi.encode(source)))));
