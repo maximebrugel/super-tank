@@ -59,7 +59,8 @@ contract SuperTank is ERC4626Checkable, ReentrancyGuard {
     /// @param gobblerId The gobbler id to withdraw
     /// @param gooAmount The goo tokens to deposit
     function depositGobbler(uint256 gobblerId, uint256 gooAmount)
-        external
+        public 
+        virtual
         nonReentrant
     {
         // Transfer the gobbler from the depositor to the SuperTank
@@ -93,7 +94,7 @@ contract SuperTank is ERC4626Checkable, ReentrancyGuard {
 
     /// @notice Allow the depositor to withdraw his Gobbler
     /// @param gobblerId The gobbler id to withdraw
-    function withdrawGobbler(uint256 gobblerId) external nonReentrant {
+    function withdrawGobbler(uint256 gobblerId) public virtual nonReentrant {
         // To withdraw the msg.sender must be the gobbler depositor
         if (deposits[gobblerId] != msg.sender) {
             revert NotDepositor(gobblerId);
@@ -163,5 +164,6 @@ contract SuperTank is ERC4626Checkable, ReentrancyGuard {
         uint256 assets,
         address receiver,
         address owner
-    ) internal virtual override {}
+    ) internal virtual override {
+        console.log("test");}
 }
