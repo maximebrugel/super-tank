@@ -2,12 +2,12 @@
 pragma solidity >=0.8.0;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC4626} from "solmate/mixins/ERC4626.sol";
+import {ERC4626Checkable} from "./mixins/ERC4626Checkable.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
 import {ArtGobblers} from "art-gobblers/ArtGobblers.sol";
 
-contract SuperTank is ERC4626, ReentrancyGuard {
+contract SuperTank is ERC4626Checkable, ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
     /*                                   EVENTS                                   */
     /* -------------------------------------------------------------------------- */
@@ -42,7 +42,12 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /*                                 CONSTRUCTOR                                */
     /* -------------------------------------------------------------------------- */
 
-    constructor(ERC20 _goo, ArtGobblers _artGobblers) ERC4626(_goo, "Goo SuperTank", "GooST") {
+    constructor(
+        ERC20 _goo,
+        ArtGobblers _artGobblers,
+        string memory _assetName,
+        string memory _assetSymbol
+    ) ERC4626Checkable(_goo, _assetName, _assetSymbol) {
         artGobblers = _artGobblers;
     }
 
@@ -53,7 +58,10 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /// @notice Allow a Gobbler owner to deposit the Gobbler in the SuperTank
     /// @param gobblerId The gobbler id to withdraw
     /// @param gooAmount The goo tokens to deposit
-    function depositGobbler(uint256 gobblerId, uint256 gooAmount) external nonReentrant {
+    function depositGobbler(uint256 gobblerId, uint256 gooAmount)
+        external
+        nonReentrant
+    {
         // Transfer the gobbler from the depositor to the SuperTank
         artGobblers.transferFrom(msg.sender, address(this), gobblerId);
 
@@ -144,4 +152,16 @@ contract SuperTank is ERC4626, ReentrancyGuard {
             return artGobblers.gooBalance(address(this));
         }
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                          ERC4626Checkable LOGIC                            */
+    /* -------------------------------------------------------------------------- */
+
+    function beforeDeposit(uint256 assets, address receiver) internal virtual override {}
+
+    function afterWithdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) internal virtual override {}
 }

@@ -96,7 +96,7 @@ contract SuperTank_Tests is Test {
         vm.stopPrank();
         vm.startPrank(deployer);
 
-        superTank = new SuperTank(ERC20(address(goo)), gobblers);
+        superTank = new SuperTank(ERC20(address(goo)), gobblers, "Goo SuperTank", "GooST");
 
         vm.stopPrank();
 
