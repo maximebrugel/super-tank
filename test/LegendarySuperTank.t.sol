@@ -258,20 +258,26 @@ contract LegendarySuperTank_Tests is Test {
 
     /// @dev Withdraw goo with one Gobbler deposited
     ///      TODO
-    // function testLegendaryWithdrawGooWithGobblerDeposited() public {
-    //     testLegendaryDepositGooWithGobblerDeposited();
-    //     superTank.deposit(100 ether, gobblerOwners[0]);
+    function testLegendaryWithdrawGooWithGobblerDeposited() public {
+        vm.startPrank(gobblerOwners[0]);
 
-    //     uint256 userBalanceBefore = goo.balanceOf(gobblerOwners[0]);
-    //     uint256 superTankVirtualBalanceBefore = gobblers.gooBalance(address(superTank));
+        // Deposit a Gobbler and 100 Goo
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+        superTank.depositGobbler(1, 100 ether);
 
-    //     console.log(superTankVirtualBalanceBefore);
-    //     superTank.withdraw(50 ether, gobblerOwners[0], gobblerOwners[0]);
+        uint256 gooOwnerBalanceBefore = goo.balanceOf(gobblerOwners[0]);
+        uint256 gooSuperTankVirtualBalanceBefore = gobblers.gooBalance(address(superTank));
+        
+        assertEq(goo.balanceOf(address(superTank)), 0);
 
-    //     // assertEq(goo.balanceOf(gobblerOwners[0]), userBalanceBefore + 50 ether);
-    //     // assertEq(goo.balanceOf(address(superTank)), 0);
-    //     // assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
-    // }
+        // Withdraw goo
+        superTank.withdraw(50 ether, gobblerOwners[0], gobblerOwners[0]);
+        
+        assertEq(goo.balanceOf(gobblerOwners[0]), gooOwnerBalanceBefore + 50 ether);
+        assertEq(gobblers.gooBalance(address(superTank)), gooSuperTankVirtualBalanceBefore - 50 ether);
+        assertEq(goo.balanceOf(address(superTank)), 0);
+    }
     
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {

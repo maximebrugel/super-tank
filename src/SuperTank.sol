@@ -164,6 +164,5 @@ contract SuperTank is ERC4626Checkable, ReentrancyGuard {
         uint256 assets,
         address receiver,
         address owner
-    ) internal virtual override {
-        console.log("test");}
+    ) internal virtual override {}
 }
