@@ -14,7 +14,7 @@ The Vault is deployed with a fee on performances (between 1 and 100%) and are se
 
 This could meet several needs :
 - Goo holders who cannot afford to buy a Gobblers and want to participate.
-- A Gobblers owner who want to share his goo issuance, remaining competitive with the strategy of not sharing.
+- A Gobblers owner who want to share his goo issuance, remaining competitive with the strategy of producing goo on your own.
 - A DAO as fee recipient to acquire gobblers, pages,...
 
 ## Getting Started
