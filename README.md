@@ -8,11 +8,14 @@
 
 ## Goal
 
-The *Super Tank* allows Gobblers owners and Goo holders to pool everything in one tank.
+The *Super Tank* allows Gobblers owner and Goo holders to pool everything in one tank.
+
+The Vault is deployed with a fee on performances (between 1 and 100%) and are sent to a `feeRecipient`.
 
 This is not an optimal strategy... but this could meet several needs :
 - Goo holders who cannot afford to buy a Gobblers and want to participate.
-- TODO
+- A Gobblers owner who want to share his goo issuance, remaining competitive with the strategy of not sharing.
+- A DAO as fee recipient to acquire gobblers, pages,...
 
 ## Getting Started
 
