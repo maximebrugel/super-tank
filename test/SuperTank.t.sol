@@ -26,6 +26,7 @@ import {SuperTank} from "../src/SuperTank.sol";
 contract SuperTank_Tests is Test {
     address internal deployer;
     address internal artGobblerDeployer;
+    address internal feesRecipient;
 
     Utilities internal utils;
     address payable[] internal users;
@@ -50,6 +51,7 @@ contract SuperTank_Tests is Test {
     function setUp() public {
         deployer = addr("deployer");
         artGobblerDeployer = addr("artGobblerDeployer");
+        feesRecipient = addr("feesRecipient");
 
         utils = new Utilities();
         users = utils.createUsers(5);
@@ -96,7 +98,7 @@ contract SuperTank_Tests is Test {
         vm.stopPrank();
         vm.startPrank(deployer);
 
-        superTank = new SuperTank(ERC20(address(goo)), gobblers);
+        superTank = new SuperTank(ERC20(address(goo)), gobblers, 95, feesRecipient);
 
         vm.stopPrank();
 
@@ -156,7 +158,7 @@ contract SuperTank_Tests is Test {
         superTank.deposit(100 ether, gobblerOwners[0]);
 
         superTank.depositGobbler(1);
-        
+
         superTank.deposit(100 ether, gobblerOwners[0]);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
@@ -294,55 +296,7 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
         assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
     }
-    /*
-    // (100 / 100)
-    // 135415608868375828447 = 135,415608868375828447
-    // 124487740054869684490 = 124,487740054869684490
-    // 
-    // (100 / 1000)
-    // 110113965699840425701 = 110,113965699840425701
-    // 
-    // 
-    // 
-    function testCompareRewards() public {
-       
-        uint256 balanceBefore = goo.balanceOf(gobblerOwners[1]);
 
-        vm.startPrank(gobblerOwners[1]);
-        gobblers.setApprovalForAll(address(superTank), true);
-        goo.approve(address(superTank), type(uint256).max);
-        superTank.depositGobbler(2, 100 ether);
-        vm.stopPrank();
-
-        vm.startPrank(gobblerOwners[0]);
-        gobblers.setApprovalForAll(address(superTank), true);
-        goo.approve(address(superTank), type(uint256).max);
-        superTank.deposit(1000 ether, gobblerOwners[0]);
-        vm.stopPrank();
-        
-
-        vm.warp(block.timestamp + 1 days);
-        setRandomnessAndReveal(2, "seed");
-        vm.warp(block.timestamp + 200000);
-
-        uint256 finalBalance = superTank.previewRedeem(superTank.balanceOf(gobblerOwners[1]));
-
-        console.log(finalBalance);
-    }
-
-    /// @notice Call back vrf with randomness and reveal gobblers.
-    function setRandomnessAndReveal(uint256 numReveal, string memory seed) internal {
-        vm.startPrank(artGobblerDeployer);
-        bytes32 requestId = gobblers.requestRandomSeed();
-        uint256 randomness = uint256(keccak256(abi.encodePacked(seed)));
-        // call back from coordinator
-        vrfCoordinator.callBackWithRandomness(requestId, randomness, address(randProvider));
-        gobblers.revealGobblers(numReveal);
-        vm.stopPrank();
-    } 
-
-    */
-    
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {
         return address(uint160(uint256(keccak256(abi.encode(source)))));

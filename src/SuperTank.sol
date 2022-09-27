@@ -4,10 +4,16 @@ pragma solidity >=0.8.0;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 
 import {ArtGobblers} from "art-gobblers/ArtGobblers.sol";
 
 contract SuperTank is ERC4626, ReentrancyGuard {
+    using SafeTransferLib for ERC20;
+    using FixedPointMathLib for uint256;
+
     /* -------------------------------------------------------------------------- */
     /*                                   EVENTS                                   */
     /* -------------------------------------------------------------------------- */
@@ -28,6 +34,13 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /// @notice The ArtGobblers contract address
     ArtGobblers public immutable artGobblers;
 
+    /// @notice Fees sent to the Gobblers depositors
+    /// Must be between 0 and 100
+    uint256 public immutable performanceFees;
+
+    /// @notice Address receiving the performance fees
+    address public immutable feesRecipient;
+
     /* -------------------------------------------------------------------------- */
     /*                                   MEMORY                                   */
     /* -------------------------------------------------------------------------- */
@@ -38,12 +51,20 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /// @notice Amount of gobblers deposited in SuperTank
     uint256 public gobblersInSuperTank;
 
+    /// @notice Amount deposited by goo holders (user address => amount)
+    mapping(address => uint256) public amountDeposited;
+
     /* -------------------------------------------------------------------------- */
     /*                                 CONSTRUCTOR                                */
     /* -------------------------------------------------------------------------- */
 
-    constructor(ERC20 _goo, ArtGobblers _artGobblers) ERC4626(_goo, "Goo SuperTank", "GooST") {
+    constructor(ERC20 _goo, ArtGobblers _artGobblers, uint256 _performanceFees, address _feesRecipient)
+        ERC4626(_goo, "Goo SuperTank", "GooST")
+    {
+        require(_performanceFees < 100 && _performanceFees != 0, "Invalid amount");
         artGobblers = _artGobblers;
+        performanceFees = _performanceFees;
+        feesRecipient = _feesRecipient;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -98,13 +119,6 @@ contract SuperTank is ERC4626, ReentrancyGuard {
             artGobblers.removeGoo(artGobblers.gooBalance(address(this)));
         }
 
-        uint256 depositorShares = balanceOf[msg.sender]; // memory cache
-
-        // Withdrawing all the remaining Goo tokens if the depositor has some shares
-        if (depositorShares != 0) {
-            redeem(depositorShares, msg.sender, msg.sender);
-        }
-
         // Transfer back the gobbler to the depositor
         artGobblers.transferFrom(address(this), msg.sender, gobblerId);
 
@@ -114,6 +128,57 @@ contract SuperTank is ERC4626, ReentrancyGuard {
     /* -------------------------------------------------------------------------- */
     /*                                ERC4626 LOGIC                               */
     /* -------------------------------------------------------------------------- */
+
+    /// @notice Withdraw and send performance fees
+    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
+        shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
+
+        if (msg.sender != owner) {
+            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
+
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+        }
+
+        beforeWithdraw(assets, shares);
+
+        // Must be computed before burning shares
+        (uint256 fees, uint256 performance) = getAmounts(assets);
+
+        _burn(owner, shares);
+
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
+
+        amountDeposited[msg.sender] -= (assets - performance);
+
+        asset.safeTransfer(receiver, assets - fees);
+        asset.safeTransfer(feesRecipient, fees);
+    }
+
+    /// @notice Redeem and send performance fees
+    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
+        if (msg.sender != owner) {
+            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
+
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+        }
+
+        // Check for rounding error since we round down in previewRedeem.
+        require((assets = previewRedeem(shares)) != 0, "ZERO_ASSETS");
+
+        beforeWithdraw(assets, shares);
+
+        // Must be computed before burning shares
+        (uint256 fees, uint256 performance) = getAmounts(assets);
+
+        _burn(owner, shares);
+
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
+
+        amountDeposited[msg.sender] -= (assets - performance);
+
+        asset.safeTransfer(receiver, assets - fees);
+        asset.safeTransfer(feesRecipient, fees);
+    }
 
     function beforeWithdraw(uint256 assets, uint256 shares) internal override {
         // Remove Goo from Tank if some Gobblers are deposited
@@ -127,6 +192,7 @@ contract SuperTank is ERC4626, ReentrancyGuard {
         if (gobblersInSuperTank != 0) {
             artGobblers.addGoo(assets);
         }
+        amountDeposited[msg.sender] += assets;
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -135,6 +201,24 @@ contract SuperTank is ERC4626, ReentrancyGuard {
             return asset.balanceOf(address(this));
         } else {
             return artGobblers.gooBalance(address(this));
+        }
+    }
+
+    /// @notice Compute fees and performance amounts
+    /// @param assets Amount of assets
+    /// @return fees Amount of fees sent to Gobbler depositors
+    /// @return performance Amount of performance based on the initial deposit (fees included)
+    function getAmounts(uint256 assets) public view returns (uint256 fees, uint256 performance) {
+        uint256 deposited = amountDeposited[msg.sender];
+        uint256 total = previewRedeem(balanceOf[msg.sender]);
+        require(assets <= total, "total overflow");
+
+        if (total > deposited) {
+            performance = assets - (assets.mulDivDown(deposited, total));
+            fees = performance.mulDivDown(performanceFees, 100);
+        } else {
+            fees = 0;
+            performance = 0;
         }
     }
 }
