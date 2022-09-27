@@ -52,16 +52,9 @@ contract SuperTank is ERC4626, ReentrancyGuard {
 
     /// @notice Allow a Gobbler owner to deposit the Gobbler in the SuperTank
     /// @param gobblerId The gobbler id to withdraw
-    /// @param gooAmount The goo tokens to deposit
-    function depositGobbler(uint256 gobblerId, uint256 gooAmount) external nonReentrant {
+    function depositGobbler(uint256 gobblerId) external nonReentrant {
         // Transfer the gobbler from the depositor to the SuperTank
         artGobblers.transferFrom(msg.sender, address(this), gobblerId);
-
-        // Transfer and deposit the goo tokens to the SuperTank
-        // Only if the depositor wants...
-        if (gooAmount != 0) {
-            deposit(gooAmount, msg.sender);
-        }
 
         uint256 gooBalance = asset.balanceOf(address(this)); // memory cache
 

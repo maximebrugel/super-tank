@@ -128,7 +128,7 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
 
         vm.expectRevert("WRONG_FROM");
-        superTank.depositGobbler(1, 100 ether);
+        superTank.depositGobbler(1);
     }
 
     /// @dev Deposit first Gobbler but NO Goo already deposited
@@ -138,7 +138,8 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        superTank.depositGobbler(1, 100 ether);
+        superTank.depositGobbler(1);
+        superTank.deposit(100 ether, gobblerOwners[0]);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
         assertEq(gobblers.gooBalance(address(superTank)), 100 ether);
@@ -154,7 +155,9 @@ contract SuperTank_Tests is Test {
 
         superTank.deposit(100 ether, gobblerOwners[0]);
 
-        superTank.depositGobbler(1, 100 ether);
+        superTank.depositGobbler(1);
+        
+        superTank.deposit(100 ether, gobblerOwners[0]);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
         assertEq(gobblers.gooBalance(address(superTank)), 200 ether);
@@ -166,7 +169,7 @@ contract SuperTank_Tests is Test {
         vm.startPrank(gobblerOwners[1]);
 
         gobblers.setApprovalForAll(address(superTank), true);
-        superTank.depositGobbler(2, 0);
+        superTank.depositGobbler(2);
 
         vm.stopPrank();
         vm.startPrank(gobblerOwners[0]);
@@ -174,7 +177,7 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        superTank.depositGobbler(1, 0);
+        superTank.depositGobbler(1);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
         assertEq(gobblers.ownerOf(2), address(superTank));
@@ -187,7 +190,7 @@ contract SuperTank_Tests is Test {
         vm.startPrank(gobblerOwners[1]);
 
         gobblers.setApprovalForAll(address(superTank), true);
-        superTank.depositGobbler(2, 0);
+        superTank.depositGobbler(2);
 
         vm.stopPrank();
         vm.startPrank(gobblerOwners[0]);
@@ -195,7 +198,8 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        superTank.depositGobbler(1, 100 ether);
+        superTank.depositGobbler(1);
+        superTank.deposit(100 ether, gobblerOwners[0]);
 
         assertEq(gobblers.ownerOf(1), address(superTank));
         assertEq(gobblers.ownerOf(2), address(superTank));
@@ -211,7 +215,7 @@ contract SuperTank_Tests is Test {
         goo.approve(address(superTank), type(uint256).max);
 
         vm.expectRevert("TRANSFER_FROM_FAILED");
-        superTank.depositGobbler(1, type(uint256).max);
+        superTank.deposit(type(uint256).max, gobblerOwners[0]);
     }
 
     /// @dev Cannot withdraw Gobbler if not the initial depositor
@@ -221,7 +225,8 @@ contract SuperTank_Tests is Test {
         gobblers.setApprovalForAll(address(superTank), true);
         goo.approve(address(superTank), type(uint256).max);
 
-        superTank.depositGobbler(1, 100 ether);
+        superTank.depositGobbler(1);
+        superTank.deposit(100 ether, gobblerOwners[0]);
 
         vm.stopPrank();
 
@@ -247,7 +252,7 @@ contract SuperTank_Tests is Test {
         vm.startPrank(gobblerOwners[1]);
 
         gobblers.setApprovalForAll(address(superTank), true);
-        superTank.depositGobbler(2, 0);
+        superTank.depositGobbler(2);
 
         vm.stopPrank();
         vm.startPrank(gobblerOwners[0]);
@@ -289,6 +294,54 @@ contract SuperTank_Tests is Test {
         assertEq(goo.balanceOf(address(superTank)), 0);
         assertEq(gobblers.gooBalance(address(superTank)), superTankVirtualBalanceBefore - 50 ether);
     }
+    /*
+    // (100 / 100)
+    // 135415608868375828447 = 135,415608868375828447
+    // 124487740054869684490 = 124,487740054869684490
+    // 
+    // (100 / 1000)
+    // 110113965699840425701 = 110,113965699840425701
+    // 
+    // 
+    // 
+    function testCompareRewards() public {
+       
+        uint256 balanceBefore = goo.balanceOf(gobblerOwners[1]);
+
+        vm.startPrank(gobblerOwners[1]);
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+        superTank.depositGobbler(2, 100 ether);
+        vm.stopPrank();
+
+        vm.startPrank(gobblerOwners[0]);
+        gobblers.setApprovalForAll(address(superTank), true);
+        goo.approve(address(superTank), type(uint256).max);
+        superTank.deposit(1000 ether, gobblerOwners[0]);
+        vm.stopPrank();
+        
+
+        vm.warp(block.timestamp + 1 days);
+        setRandomnessAndReveal(2, "seed");
+        vm.warp(block.timestamp + 200000);
+
+        uint256 finalBalance = superTank.previewRedeem(superTank.balanceOf(gobblerOwners[1]));
+
+        console.log(finalBalance);
+    }
+
+    /// @notice Call back vrf with randomness and reveal gobblers.
+    function setRandomnessAndReveal(uint256 numReveal, string memory seed) internal {
+        vm.startPrank(artGobblerDeployer);
+        bytes32 requestId = gobblers.requestRandomSeed();
+        uint256 randomness = uint256(keccak256(abi.encodePacked(seed)));
+        // call back from coordinator
+        vrfCoordinator.callBackWithRandomness(requestId, randomness, address(randProvider));
+        gobblers.revealGobblers(numReveal);
+        vm.stopPrank();
+    } 
+
+    */
     
     // Generate address with keccak
     function addr(string memory source) internal returns (address) {
